@@ -1,40 +1,11 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuthController } from '../../controllers/useAuthController.js';
 import { Mail, Lock, User as UserIcon, ArrowRight, Zap } from 'lucide-react';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    const body = isLogin ? { email, password } : { name, email, password };
-
-    try {
-      const res = await fetch(`http://localhost:3000${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || 'Authentication failed');
-      login(data.token, data.user);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    isLogin, name, setName, email, setEmail, password, setPassword,
+    error, loading, handleSubmit, toggleMode
+  } = useAuthController();
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col justify-center px-6 relative overflow-hidden">
@@ -118,7 +89,7 @@ export default function AuthPage() {
 
           <div className="mt-8 text-center">
             <button
-              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              onClick={toggleMode}
               className="text-sm font-bold text-gray-500 hover:text-primary transition-colors"
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}

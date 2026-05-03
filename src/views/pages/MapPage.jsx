@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useMapController } from '../../controllers/useMapController.js';
 import { Menu, Search, ChevronUp, X, MapPin, LocateFixed, LogOut, User, Route, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import StationCard from '../components/StationCard.jsx';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 // Fix leaflet default icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,7 +15,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const TOMTOM_KEY = import.meta.env.VITE_TOMTOM_API_KEY;
+function FlyTo({ center, zoom }) {
+  const map = useMap();
+  map.flyTo(center, zoom, { duration: 1.2 });
+  return null;
+}
 
 const filters = ['All', 'Fast Charging', 'Available'];
 
@@ -28,102 +32,14 @@ const CITIES = [
   { name: 'Pune',      center: [18.5204, 73.8567] },
 ];
 
-function getDistanceKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function FlyTo({ center, zoom }) {
-  const map = useMap();
-  useEffect(() => { map.flyTo(center, zoom, { duration: 1.2 }); }, [center, zoom, map]);
-  return null;
-}
-
 export default function MapPage() {
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [sheetOpen, setSheetOpen] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [stations, setStations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [mapCenter, setMapCenter] = useState([12.9716, 77.5946]);
-  const [mapZoom, setMapZoom] = useState(12);
-
   const { user, logout } = useAuth();
-
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [searchCenter, setSearchCenter] = useState(null);
-  const debounceRef = useRef(null);
-
-  const locateMe = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const center = [pos.coords.latitude, pos.coords.longitude];
-          setMapCenter(center);
-          setSearchCenter(center);
-          setMapZoom(14);
-          setQuery('My Location');
-        },
-        () => alert('Could not get your location. Please check your permissions.')
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetch('http://localhost:3000/api/stations')
-      .then(res => res.json())
-      .then(data => { setStations(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const handleSearch = useCallback((value) => {
-    setQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!value.trim()) { setSuggestions([]); return; }
-
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await fetch(
-          `https://api.tomtom.com/search/2/search/${encodeURIComponent(value)}.json?key=${TOMTOM_KEY}&countrySet=IN&limit=5`
-        );
-        const data = await res.json();
-        setSuggestions(data.results || []);
-      } catch { setSuggestions([]); }
-      finally { setSearching(false); }
-    }, 400);
-  }, []);
-
-  const handleSelect = (suggestion) => {
-    const center = [suggestion.position.lat, suggestion.position.lon];
-    setMapCenter(center);
-    setSearchCenter(center);
-    setMapZoom(14);
-    setQuery(suggestion.address.freeformAddress);
-    setSuggestions([]);
-  };
-
-  const clearSearch = () => { setQuery(''); setSuggestions([]); setSearchCenter(null); };
-
-  const sortedStations = searchCenter
-    ? [...stations].sort((a, b) =>
-        getDistanceKm(searchCenter[0], searchCenter[1], a.lat, a.lng) -
-        getDistanceKm(searchCenter[0], searchCenter[1], b.lat, b.lng))
-    : stations;
-
-  const filteredStations = sortedStations.filter(s => {
-    if (activeFilter === 'Fast Charging') return s.isFast;
-    if (activeFilter === 'Available') return s.status === 'available';
-    return true;
-  });
+  const {
+    activeFilter, setActiveFilter, sheetOpen, setSheetOpen, menuOpen, setMenuOpen,
+    loading, mapCenter, setMapCenter, mapZoom, setMapZoom, query, setQuery,
+    suggestions, searching, searchCenter, setSearchCenter, locateMe, handleSearch,
+    handleSelect, clearSearch, filteredStations
+  } = useMapController();
 
   const createCustomIcon = (price, fast) =>
     L.divIcon({
@@ -148,7 +64,7 @@ export default function MapPage() {
           <FlyTo center={mapCenter} zoom={mapZoom} />
           <TileLayer
             attribution='&copy; <a href="https://developer.tomtom.com/">TomTom</a>'
-            url={`https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${TOMTOM_KEY}`}
+            url={`https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${import.meta.env.VITE_TOMTOM_API_KEY}`}
           />
 
           {searchCenter && (

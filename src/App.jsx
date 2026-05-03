@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout.jsx';
-import MapPage from './pages/MapPage.jsx';
-import RoutePage from './pages/RoutePage.jsx';
-import ProfilePage from './pages/ProfilePage.jsx';
-import AuthPage from './pages/AuthPage.jsx';
-import AdminPage from './pages/AdminPage.jsx';
+import Layout from './views/components/Layout.jsx';
+import MapPage from './views/pages/MapPage.jsx';
+import RoutePage from './views/pages/RoutePage.jsx';
+import ProfilePage from './views/pages/ProfilePage.jsx';
+import AuthPage from './views/pages/AuthPage.jsx';
+import AdminPage from './views/pages/AdminPage.jsx';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 
 function PrivateRoute({ children }) {

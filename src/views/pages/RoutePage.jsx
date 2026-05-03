@@ -5,6 +5,9 @@ import { useLocation } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+import { stationModel } from '../../models/stationModel.js';
+import { tomtomModel } from '../../models/tomtomModel.js';
+
 const TOMTOM_KEY = import.meta.env.VITE_TOMTOM_API_KEY;
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -145,10 +148,7 @@ export default function RoutePage() {
       let routeData;
 
       try {
-        const res = await fetch(
-          `https://api.tomtom.com/routing/1/calculateRoute/${startPos[0]},${startPos[1]}:${destPos[0]},${destPos[1]}/json?key=${TOMTOM_KEY}&travelMode=car&instructionsType=text`
-        );
-        const data = await res.json();
+        const data = await tomtomModel.calculateRoute(startPos, destPos);
         const leg = data?.routes?.[0]?.legs?.[0];
 
         if (leg && leg.points && leg.points.length > 1) {
@@ -177,8 +177,7 @@ export default function RoutePage() {
 
       try {
         const mid = routeData.points[Math.floor(routeData.points.length / 2)];
-        const sRes = await fetch('http://localhost:3000/api/stations');
-        const stations = await sRes.json();
+        const stations = await stationModel.getAll();
         const sorted = stations
           .map(s => ({ ...s, d: haversineKm(mid[0], mid[1], s.lat, s.lng) }))
           .sort((a, b) => a.d - b.d)

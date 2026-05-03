@@ -1,14 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-
-const API = 'http://localhost:3000';
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-function apiFetch(path, token, opts = {}) {
-  return fetch(`${API}${path}`, {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
-  }).then(r => r.json());
-}
+import { useState } from 'react';
+import { useAdminController } from '../../controllers/useAdminController.js';
 
 // ── sub-components ────────────────────────────────────────────────────────────
 function StatCard({ label, value, color }) {
@@ -78,64 +69,12 @@ function StationModal({ initial, onSave, onClose }) {
   );
 }
 
-// ── Main AdminPage ────────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const [token, setToken] = useState(localStorage.getItem('adminToken'));
-  const [loginForm, setLoginForm] = useState({ email: 'admin@electromap.com', password: '' });
-  const [loginError, setLoginError] = useState('');
-  const [tab, setTab] = useState('dashboard');
-  const [stats, setStats] = useState(null);
-  const [stations, setStations] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [modal, setModal] = useState(null); // null | 'add' | station-object
-  const [loading, setLoading] = useState(false);
-
-  // ── login ──
-  const handleLogin = async e => {
-    e.preventDefault();
-    setLoginError('');
-    const data = await apiFetch('/api/auth/login', '', {
-      method: 'POST', body: JSON.stringify(loginForm),
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(() => ({ error: 'Network error' }));
-    if (data.error) { setLoginError(data.error); return; }
-    if (!data.user?.isAdmin) { setLoginError('Not an admin account'); return; }
-    localStorage.setItem('adminToken', data.token);
-    setToken(data.token);
-  };
-
-  // ── fetch data ──
-  const loadStats = useCallback(() => apiFetch('/api/admin/stats', token).then(setStats), [token]);
-  const loadStations = useCallback(() => apiFetch('/api/stations', token).then(setStations), [token]);
-  const loadUsers = useCallback(() => apiFetch('/api/admin/users', token).then(setUsers), [token]);
-
-  useEffect(() => { if (!token) return; loadStats(); loadStations(); loadUsers(); }, [token, loadStats, loadStations, loadUsers]);
-
-  // ── station actions ──
-  const saveStation = async form => {
-    setLoading(true);
-    if (form._id || form.id) {
-      const id = form._id || form.id;
-      await apiFetch(`/api/admin/stations/${id}`, token, { method: 'PUT', body: JSON.stringify(form) });
-    } else {
-      await apiFetch('/api/admin/stations', token, { method: 'POST', body: JSON.stringify(form) });
-    }
-    setModal(null); setLoading(false); loadStations(); loadStats();
-  };
-
-  const deleteStation = async id => {
-    if (!confirm('Delete this station?')) return;
-    await apiFetch(`/api/admin/stations/${id}`, token, { method: 'DELETE' });
-    loadStations(); loadStats();
-  };
-
-  const deleteUser = async id => {
-    if (!confirm('Delete this user?')) return;
-    await apiFetch(`/api/admin/users/${id}`, token, { method: 'DELETE' });
-    loadUsers(); loadStats();
-  };
-
-  const logout = () => { localStorage.removeItem('adminToken'); setToken(null); };
+  const {
+    token, loginForm, setLoginForm, loginError, handleLogin, tab, setTab,
+    stats, stations, users, modal, setModal, loading, saveStation,
+    deleteStation, deleteUser, logout
+  } = useAdminController();
 
   // ── login screen ──────────────────────────────────────────────────────────
   if (!token) return (

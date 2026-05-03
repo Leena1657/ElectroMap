@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Settings, CreditCard, History, Bell, ChevronRight, ChevronDown, LogOut, Shield, Moon, MapPin, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
